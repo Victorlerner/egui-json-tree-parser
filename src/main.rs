@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use eframe::egui::{RichText, Ui};
+use eframe::emath::Vec2;
 use egui::{Align, Button, Layout};
 use egui_json_tree::{DefaultExpand, JsonTree};
 use serde_json::{json, Value};
-
 #[derive(Default)]
 struct MyApp {
   folder_title: String,
@@ -19,8 +19,10 @@ impl MyApp {
     }
   }
 }
+
 impl eframe::App for MyApp {
   fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+
     //let content: String = (0..10).map(|s| s.to_string() + "\n").collect();
     let value: serde_json::Result<Value> = serde_json::from_str(&mut self.inputJson);
     let pretty_string = value
@@ -32,10 +34,6 @@ impl eframe::App for MyApp {
       .resizable(true)
       .min_width(900.0)
       .show(ctx, |ui| {
-
-     //   let response = ui.add(egui::TextEdit::singleline(&mut self.folder_title));
-       // if response.changed() {}
-
         ui.add_space(ui.spacing().item_spacing.y);
         ui.heading("Enter raw JSON in the text box to see the visualisation below.");
         // ui.label("Enter raw JSON in the text box to see the visualisation below.");
@@ -50,16 +48,6 @@ impl eframe::App for MyApp {
         if ui.add(egui::Button::new("Clear")).clicked() {
           self.inputJson = "{}".to_string();
         }
-
-
-       /* ui.add_enabled_ui(pretty_string.is_some(), |ui| {
-          if ui.button("Clear").clicked() {
-            self.inputJson = "{}".to_string();
-            println!("Beautified JSON {:?}", self.inputJson);
-          }
-        });*/
-
-
         ui.add_space(ui.spacing().item_spacing.y);
         egui::ScrollArea::vertical()
           .id_source("serial_output")
@@ -80,23 +68,24 @@ impl eframe::App for MyApp {
       });
 
 ///////////////
-    egui::CentralPanel::default().show(ctx, |ui| {
-      ui.heading("Hello World!");
+    egui::CentralPanel::default()
+      .show(ctx, |ui| {
+        ui.heading("Hello World!");
 
-      ui.add_space(ui.spacing().item_spacing.y);
-      ui.separator();
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.separator();
 
-      match value.as_ref() {
-        Ok(value) => {
-          JsonTree::new("99999999999", value).show(ui);
-        }
-        Err(err) => {
-          ui.label(RichText::new(err.to_string()).color(ui.visuals().error_fg_color));
-        }
-      };
+        match value.as_ref() {
+          Ok(value) => {
+            JsonTree::new("99999999999", value).show(ui);
+          }
+          Err(err) => {
+            ui.label(RichText::new(err.to_string()).color(ui.visuals().error_fg_color));
+          }
+        };
 
-      ui.add_space(ui.spacing().item_spacing.y);
-    });
+        ui.add_space(ui.spacing().item_spacing.y);
+      });
   }
 
   fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
@@ -105,9 +94,16 @@ impl eframe::App for MyApp {
 }
 
 fn main() {
-  let _ = eframe::run_native(
-    "egui-json-tree example",
-    eframe::NativeOptions::default(),
+  let mut native_options = eframe::NativeOptions::default();
+  native_options.persist_window = true;
+  native_options.viewport = Default::default();
+  //native_options.viewport.fullscreen = Some(true);
+  let viewport_size = Vec2 { x: 1920.0, y: 1080.0 }; // Example size: 1920x1080 pixels
+  native_options.viewport.inner_size = Some(viewport_size);
+
+  eframe::run_native(
+    "Dev Tools",
+    native_options,
     Box::new(|_cc| Box::<MyApp>::default()),
   );
 }
