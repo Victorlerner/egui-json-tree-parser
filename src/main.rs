@@ -33,14 +33,23 @@ impl Show for CustomExample {
   fn show(&mut self, ui: &mut Ui) {
     ui.label("Enter raw JSON in the text box to see the visualisation below.");
 
-    ui.add_space(ui.spacing().item_spacing.y);
-    ui.add(
-      egui::TextEdit::multiline(&mut self.input)
-        .code_editor()
-        .desired_rows(4)
-        .desired_width(f32::INFINITY),
-    );
 
+    ui.add_space(ui.spacing().item_spacing.y);
+    egui::ScrollArea::vertical()
+      .id_source("serial_output")
+      .auto_shrink([false; 2])
+      .stick_to_bottom(true)
+      .max_height(500.0)
+      .enable_scrolling(true)
+      .show(ui, |ui| {
+        ui.add(
+          egui::TextEdit::multiline(&mut self.input)
+            .code_editor()
+            .desired_rows(20)
+            .desired_width(f32::INFINITY)
+          ,
+        );
+      });
     let value: serde_json::Result<Value> = serde_json::from_str(&self.input);
     let pretty_string = value
       .as_ref()
@@ -71,8 +80,6 @@ impl Show for CustomExample {
 }
 
 
-
-
 struct DemoApp {
   examples: Vec<Box<dyn Show>>,
   open_example_titles: HashMap<&'static str, bool>,
@@ -82,34 +89,114 @@ impl Default for DemoApp {
   fn default() -> Self {
     Self {
       examples: vec![
-        Box::new(CustomExample::new("Custom Input")),
+        Box::new(CustomExample::new("Custom Input2")),
       ],
       open_example_titles: HashMap::new(),
     }
   }
 }
 
+
 impl eframe::App for DemoApp {
   fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    let mut inputJson: String = String::from("");
+    let content: String = (0..10).map(|s| s.to_string() + "\n").collect();
+
     egui::SidePanel::left("left_panel")
       .resizable(true)
       .show(ctx, |ui| {
-        ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
-          for example in self.examples.iter() {
-            let is_open = self.open_example_titles.entry(example.title()).or_default();
+        /* ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+           for example in self.examples.iter() {
+             let is_open = self.open_example_titles.entry(example.title()).or_default();
 
-            ui.toggle_value(is_open, example.title());
-          }
-        });
+             ui.toggle_value(is_open, example.title());
+           }
+         });*/
+        ui.label("Enter raw JSON in the text box to see the visualisation below.");
+        ui.add_space(ui.spacing().item_spacing.y);
+
+        egui::ScrollArea::vertical()
+          .id_source("serial_output")
+          .auto_shrink([false; 2])
+          .stick_to_bottom(true)
+          //  .max_height(280.0)
+          .enable_scrolling(true)
+          .show(ui, |ui| {
+            ui.add(
+              // egui::TextEdit::multiline(&mut content.as_str())
+              //   .lock_focus(true)
+              //   .text_color(egui::Color32::WHITE)
+              //   .desired_width(1000.0)
+              /*  egui::TextEdit::multiline(&mut inputJson.as_str())
+                  .lock_focus(true)
+                  .text_color(egui::Color32::WHITE)
+                  .desired_width(1000.0)*/
+
+              egui::TextEdit::multiline(&mut content.as_str())
+                .code_editor()
+                .desired_rows(20)
+                .desired_width(f32::INFINITY)
+            );
+          });
+
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.add_space(ui.spacing().item_spacing.y);
+        ui.add_space(ui.spacing().item_spacing.y);
       });
 
-    for example in self.examples.iter_mut() {
-      let is_open = self.open_example_titles.entry(example.title()).or_default();
+///////////////
+    egui::CentralPanel::default().show(ctx, |ui| {
+      ui.heading("Hello World!");
 
-      egui::Window::new(example.title())
-        .open(is_open)
-        .show(ctx, |ui| example.show(ui));
-    }
+
+      // egui::ScrollArea::vertical()
+      //   .id_source("serial_output2")
+      //   .auto_shrink([false; 2])
+      //   .stick_to_bottom(true)
+      //   .enable_scrolling(true)
+      //   .show(ui, |ui| {
+      //     ui.add(
+      //       egui::TextEdit::multiline(&mut content.as_str())
+      //         .lock_focus(true)
+      //         .text_color(egui::Color32::WHITE)
+      //         .desired_width(1000.0)
+      //     );
+      //   });
+
+
+      /*  ui.label("Search:");
+        let mut text = String::from("test");
+
+        let (text_edit_response, clear_button_response) = ui
+          .horizontal(|ui| {
+            let text_edit_response = ui.text_edit_singleline(&mut text);
+            let clear_button_response = ui.button("Clear");
+            (text_edit_response, clear_button_response)
+          })
+          .inner;
+
+
+        let value = serde_json::json!({ "foo": "bar", "fizz": [1, 2, 3]});
+
+  // Simple:
+        JsonTree::new("simple-tree", &value).show(ui);*/
+
+      for example in self.examples.iter_mut() {
+        example.show(ui);
+      }
+    });
+
+/////////
+    /* for example in self.examples.iter_mut() {
+       let is_open = self.open_example_titles.entry(example.title()).or_default();
+
+       egui::Window::new(example.title())
+         .open(is_open)
+         .show(ctx, |ui| example.show(ui));
+     }*/
   }
 
   fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
