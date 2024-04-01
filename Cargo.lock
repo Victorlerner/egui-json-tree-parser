@@ -578,6 +578,7 @@ name = "calculator-wasm-rust-pwa"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "egui",
  "egui_json_tree",
  "serde_json",
 ]
