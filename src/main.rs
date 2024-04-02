@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-
+use std::io::BufRead;
 use eframe::egui::{RichText, Ui};
 use eframe::emath::Vec2;
 use egui::{Align, Button, Color32, Layout};
@@ -14,17 +14,33 @@ pub enum Message {
 #[derive(Default)]
 struct MyApp {
   folder_title: String,
-  inputJson: String,
+  input_json: String,
   dropped_files: Vec<egui::DroppedFile>,
   picked_path: Option<String>,
   dropped_files_processed: bool,
+  partial_json: String,
+  search_input: String,
 }
+impl MyApp {
+  fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    Self {
+      folder_title: "Add Folder".to_string(),
+      input_json: serde_json::to_string(&json!({"foo": "bar"})).unwrap(),
+      dropped_files: Vec::new(),
+      picked_path: None,
+      dropped_files_processed: false,
+      partial_json: String::new(),
+      search_input: String::from(""),
+    }
+  }
+}
+
 impl eframe::App for MyApp {
+
   fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
-
     //let content: String = (0..10).map(|s| s.to_string() + "\n").collect();
-    let value: serde_json::Result<Value> = serde_json::from_str(&mut self.inputJson);
+    let value: serde_json::Result<Value> = serde_json::from_str(&mut self.input_json);
     let pretty_string = value
       .as_ref()
       .ok()
@@ -66,13 +82,6 @@ impl eframe::App for MyApp {
                 "???".to_owned()
               };
 
-              // Чтение содержимого файла
-
-              /* let content = fs::read_to_string(file.path.as_ref().unwrap());
-               println!("Content: {:?}", content);*/
-
-              // Вывод содержимого файла в консоль
-
               let mut additional_info = vec![];
               if !file.mime.is_empty() {
                 additional_info.push(format!("type: {}", file.mime));
@@ -91,30 +100,37 @@ impl eframe::App for MyApp {
 
         if !self.dropped_files.is_empty() {
           for file in &self.dropped_files {
-            let content = fs::read_to_string(file.path.as_ref().unwrap());
-          //  println!("2Content: {:?}", &content);
-
-            let content = content
-              .as_ref()
-              .ok();
-
-            if let Some(string) = content {
-              self.inputJson = String::from(string);
+            if let Some(path) = &file.path {
+              let file = fs::File::open(path);
+              match file {
+                Ok(file) => {
+                  let reader = std::io::BufReader::new(file);
+                  for line in reader.lines() {
+                    if let Ok(line) = line {
+                      // Обрабатываем строку JSON
+                      self.input_json.push_str(&line);
+                    }
+                  }
+                }
+                Err(err) => {
+                  println!("Error opening file: {:?}", err);
+                }
+              }
             }
           }
           // Clear dropped files after processing
           self.dropped_files.clear();
         }
 
+        //////////////////////////////////////////////////////
 
         ui.add_enabled_ui(pretty_string.is_some(), |ui| {
           if ui.button("Beautify").clicked() {
-            self.inputJson = pretty_string.unwrap();
-            println!("Beautified JSON {:?}", self.inputJson);
+            self.input_json = pretty_string.unwrap();
           }
         });
         if ui.add(egui::Button::new("Clear")).clicked() {
-          self.inputJson = "{}".to_string();
+          self.input_json = "{}".to_string();
         }
         ui.add_space(ui.spacing().item_spacing.y);
         egui::ScrollArea::vertical()
@@ -125,7 +141,7 @@ impl eframe::App for MyApp {
           .enable_scrolling(true)
           .show(ui, |ui| {
             ui.add(
-              egui::TextEdit::multiline(&mut self.inputJson)
+              egui::TextEdit::multiline(&mut self.input_json)
                 .code_editor()
                 .desired_rows(20)
                 .desired_width(f32::INFINITY)
@@ -139,19 +155,49 @@ impl eframe::App for MyApp {
 ///////////////
     egui::CentralPanel::default()
       .show(ctx, |ui| {
-        ui.heading("Hello World!");
+        ui.heading("Json Node");
 
+        ui.label("Search:");
+
+        let (text_edit_response, clear_button_response) = ui
+          .horizontal(|ui| {
+            println!("self.search_input {}", self.search_input);
+            if self.search_input.is_empty() {
+              self.search_input = String::from(" ");
+            }
+            let text_edit_response = ui.text_edit_singleline(&mut self.search_input);
+            let clear_button_response = ui.button("Clear");
+            (text_edit_response, clear_button_response)
+          })
+          .inner;
 
 
         ///
         ui.add_space(ui.spacing().item_spacing.y);
         ui.separator();
+        // JsonTree::new("99999999999", value.as_ref().unwrap())
+        //   .default_expand(DefaultExpand::SearchResults("choice"))
+        //   .show(ui);
 
         match value.as_ref() {
           Ok(value) => {
-            JsonTree::new("99999999999", value)
-              .default_expand(DefaultExpand::SearchResults("choice"))
+          let mut response =   JsonTree::new("99999999999", value)
+              .default_expand(DefaultExpand::SearchResults(&self.search_input))
+              //.default_expand(DefaultExpand::All)
               .show(ui);
+            if text_edit_response.changed() {
+              response.reset_expanded(ui);
+
+            }
+            if clear_button_response.clicked() {
+              self.search_input.clear();
+              response.reset_expanded(ui);
+
+            }
+            if ui.button("Reset expanded").clicked() {
+              response.reset_expanded(ui);
+
+            }
           }
           Err(err) => {
             ui.label(RichText::new(err.to_string()).color(ui.visuals().error_fg_color));
