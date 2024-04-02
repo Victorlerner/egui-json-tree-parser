@@ -48,7 +48,7 @@ impl eframe::App for MyApp {
 
     egui::SidePanel::left("left_panel")
       .resizable(true)
-      .min_width(900.0)
+      .min_width(700.0)
       .show(ctx, |ui| {
         ui.add_space(ui.spacing().item_spacing.y);
         ui.heading("Enter raw JSON in the text box to see the visualisation below.");
@@ -99,6 +99,7 @@ impl eframe::App for MyApp {
         }
 
         if !self.dropped_files.is_empty() {
+          self.input_json = String::from("");
           for file in &self.dropped_files {
             if let Some(path) = &file.path {
               let file = fs::File::open(path);
@@ -161,7 +162,6 @@ impl eframe::App for MyApp {
 
         let (text_edit_response, clear_button_response) = ui
           .horizontal(|ui| {
-            println!("self.search_input {}", self.search_input);
             if self.search_input.is_empty() {
               self.search_input = String::from(" ");
             }
@@ -181,23 +181,26 @@ impl eframe::App for MyApp {
 
         match value.as_ref() {
           Ok(value) => {
-          let mut response =   JsonTree::new("99999999999", value)
-              .default_expand(DefaultExpand::SearchResults(&self.search_input))
-              //.default_expand(DefaultExpand::All)
-              .show(ui);
-            if text_edit_response.changed() {
-              response.reset_expanded(ui);
-
-            }
-            if clear_button_response.clicked() {
-              self.search_input.clear();
-              response.reset_expanded(ui);
-
-            }
-            if ui.button("Reset expanded").clicked() {
-              response.reset_expanded(ui);
-
-            }
+            egui::ScrollArea::vertical()
+              .id_source("serial_output")
+              .auto_shrink([false; 2])
+              .enable_scrolling(true)
+              .show(ui, |ui| {
+                let mut response = JsonTree::new("99999999999", value)
+                  .default_expand(DefaultExpand::SearchResults(&self.search_input))
+                  //.default_expand(DefaultExpand::All)
+                  .show(ui);
+                if text_edit_response.changed() {
+                  response.reset_expanded(ui);
+                }
+                if clear_button_response.clicked() {
+                  self.search_input.clear();
+                  response.reset_expanded(ui);
+                }
+                if ui.button("Reset expanded").clicked() {
+                  response.reset_expanded(ui);
+                }
+              });
           }
           Err(err) => {
             ui.label(RichText::new(err.to_string()).color(ui.visuals().error_fg_color));
